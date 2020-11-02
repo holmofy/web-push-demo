@@ -1,5 +1,3 @@
-var url = 'http://localhost:8080/subscribe';
-
 //Vapid public key.
 var applicationServerPublicKey = 'BBYCxwATP2vVgw7mMPHJfT6bZrJP2iUV7OP_oxHzEcNFenrX66D8G34CdEmVULNg4WJXfjkeyT0AT9LwavpN8M4=';
 
@@ -8,16 +6,29 @@ var serviceWorkerName = 'sw.js';
 var isSubscribed = false;
 var swRegistration = null;
 
+function substringBefore(str, separator) {
+    if (!str || !separator) {
+        return str;
+    }
+    const pos = str.lastIndexOf(separator);
+    if (pos < 0) {
+        return str;
+    }
+    return str.substring(0, pos);
+}
+
+var appServerPath = location.protocol + '//' + location.host + substringBefore(location.pathname, '/')
+
 $(document).ready(function () {
     $('#btnPushNotifications').click(function (event) {
-        if(isSubscribed){
+        if (isSubscribed) {
             console.log("Unsubscribing...");
             unsubscribe();
-        }else{
+        } else {
             subscribe();
         }
     });
-    
+
     Notification.requestPermission().then(function (status) {
         if (status === 'denied') {
             console.log('[Notification.requestPermission] The user has blocked notifications.');
@@ -26,6 +37,37 @@ $(document).ready(function () {
             console.log('[Notification.requestPermission] Initializing service worker.');
             initialiseServiceWorker();
         }
+    });
+    getFingerDeviceId(function (finger) {
+        $('#browserId').text(finger);
+    })
+
+    $('#curl').text(
+        "curl -X POST \\\n" +
+        "            " + appServerPath + "/notify-all \\\n" +
+        "            -H 'Cache-Control: no-cache' \\\n" +
+        "            -H 'Content-Type: application/json' \\\n" +
+        "            -d '{\n" +
+        "            \"title\": \"welcome to my homepage\",\n" +
+        "            \"message\": \"hello world\",\n" +
+        "            \"clickTarget\": \"http://www.hufeifei.com\"\n" +
+        "            }'"
+    );
+
+    window.addEventListener("message", function (e) {
+        const $msg = $('#msg');
+        $msg.text($msg.text() + JSON.stringify(e.data) + "\n");
+    });
+    const iframe = document.createElement('iframe');
+    iframe.setAttribute('id', 'iframe');
+    iframe.setAttribute('src', 'http://localhost:8000');
+    iframe.setAttribute('width', '100%');
+    iframe.setAttribute('height', '1000');
+    document.body.appendChild(iframe);
+
+    $('#iframePermission').click(function () {
+        iframe.contentWindow.postMessage('subscribed?', 'http://localhost:8000');
+        console.log('post subscribed message');
     });
 });
 
@@ -46,7 +88,7 @@ function handleSWRegistration(reg) {
     } else if (reg.active) {
         console.log('Service worker active');
     }
-    
+
     swRegistration = reg;
     initialiseState(reg);
 }
@@ -93,7 +135,7 @@ function initialiseState(reg) {
 function subscribe() {
     navigator.serviceWorker.ready.then(function (reg) {
         var subscribeParams = {userVisibleOnly: true};
-        
+
         //Setting the public key of our VAPID key pair.
         var applicationServerKey = urlB64ToUint8Array(applicationServerPublicKey);
         subscribeParams.applicationServerKey = applicationServerKey;
@@ -103,6 +145,7 @@ function subscribe() {
 
                 // Update status to subscribe current user on server, and to let
                 // other users know this user has subscribed
+                console.log('subscribe to push.', subscription);
                 var endpoint = subscription.endpoint;
                 var key = subscription.getKey('p256dh');
                 var auth = subscription.getKey('auth');
@@ -120,16 +163,16 @@ function subscribe() {
 function unsubscribe() {
     var endpoint = null;
     swRegistration.pushManager.getSubscription()
-        .then(function(subscription) {
+        .then(function (subscription) {
             if (subscription) {
                 endpoint = subscription.endpoint;
                 return subscription.unsubscribe();
             }
         })
-        .catch(function(error) {
+        .catch(function (error) {
             console.log('Error unsubscribing', error);
         })
-        .then(function() {
+        .then(function () {
             removeSubscriptionFromServer(endpoint);
 
             console.log('User is unsubscribed.');
@@ -144,7 +187,7 @@ function sendSubscriptionToServer(endpoint, key, auth) {
     var encodedAuth = btoa(String.fromCharCode.apply(null, new Uint8Array(auth)));
     $.ajax({
         type: 'POST',
-        url: url,
+        url: appServerPath + "/subscribe",
         data: {publicKey: encodedKey, auth: encodedAuth, notificationEndPoint: endpoint},
         success: function (response) {
             console.log('Subscribed successfully! ' + JSON.stringify(response));
@@ -156,7 +199,7 @@ function sendSubscriptionToServer(endpoint, key, auth) {
 function removeSubscriptionFromServer(endpoint) {
     $.ajax({
         type: 'POST',
-        url: '/unsubscribe',
+        url: appServerPath + '/unsubscribe',
         data: {notificationEndPoint: endpoint},
         success: function (response) {
             console.log('Unsubscribed successfully! ' + JSON.stringify(response));
@@ -167,7 +210,7 @@ function removeSubscriptionFromServer(endpoint) {
 
 function disableAndSetBtnMessage(message) {
     setBtnMessage(message);
-    $('#btnPushNotifications').attr('disabled','disabled');
+    $('#btnPushNotifications').attr('disabled', 'disabled');
 }
 
 function enableAndSetBtnMessage(message) {
@@ -202,4 +245,47 @@ function urlB64ToUint8Array(base64String) {
         outputArray[i] = rawData.charCodeAt(i);
     }
     return outputArray;
+}
+
+function getFingerDeviceId(successHandle) {
+    const options = {
+        excludes: {
+            language: true,
+            colorDepth: true,
+            deviceMemory: true,
+            pixelRatio: true,
+            availableScreenResolution: true,
+            timezoneOffset: true,
+            timezone: true,
+            sessionStorage: true,
+            localStorage: true,
+            indexedDb: true,
+            addBehavior: true,
+            openDatabase: true,
+            cpuClass: true,
+            doNotTrack: true,
+            plugins: true,
+            canvas: true,
+            webglVendorAndRenderer: true,
+            adBlock: true,
+            hasLiedLanguages: true,
+            hasLiedResolution: true,
+            hasLiedOs: true,
+            hasLiedBrowser: true,
+            touchSupport: true,
+            audio: false,
+            enumerateDevices: true,
+            hardwareConcurrency: true,
+        }
+    };
+    Fingerprint2.get(options, function (components) {
+        // 参数
+        const values = components.map(function (component) {
+            return component.value
+        });
+        // 指纹
+        const finger = Fingerprint2.x64hash128(values.join(''), 31);
+        console.log('finger======', finger);
+        successHandle(finger);
+    });
 }
