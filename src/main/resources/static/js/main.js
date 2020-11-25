@@ -1,5 +1,5 @@
 //Vapid public key.
-var applicationServerPublicKey = 'BBYCxwATP2vVgw7mMPHJfT6bZrJP2iUV7OP_oxHzEcNFenrX66D8G34CdEmVULNg4WJXfjkeyT0AT9LwavpN8M4=';
+var applicationServerPublicKey = 'BIGeWzIKODFi_GHGhLIeDL0fJbn5Zafo7g-i5ZBBTKKm0mqhi2Trsm2jYdgC16oWZTteMpliALI9J1kXtWL9KFQ';
 
 var serviceWorkerName = 'sw.js';
 
@@ -137,8 +137,7 @@ function subscribe() {
         var subscribeParams = {userVisibleOnly: true};
 
         //Setting the public key of our VAPID key pair.
-        var applicationServerKey = urlB64ToUint8Array(applicationServerPublicKey);
-        subscribeParams.applicationServerKey = applicationServerKey;
+        subscribeParams.applicationServerKey = urlB64ToUint8Array(applicationServerPublicKey);
 
         reg.pushManager.subscribe(subscribeParams)
             .then(function (subscription) {
@@ -146,6 +145,8 @@ function subscribe() {
                 // Update status to subscribe current user on server, and to let
                 // other users know this user has subscribed
                 console.log('subscribe to push.', subscription);
+                console.log('subscription.toJSON()', subscription.toJSON());
+
                 var endpoint = subscription.endpoint;
                 var key = subscription.getKey('p256dh');
                 var auth = subscription.getKey('auth');

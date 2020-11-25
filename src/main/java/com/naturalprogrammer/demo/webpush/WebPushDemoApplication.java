@@ -85,8 +85,8 @@ public class WebPushDemoApplication {
             Security.addProvider(new BouncyCastleProvider());
         }
 
-        pushService.setPublicKey("BBYCxwATP2vVgw7mMPHJfT6bZrJP2iUV7OP_oxHzEcNFenrX66D8G34CdEmVULNg4WJXfjkeyT0AT9LwavpN8M4=");
-        pushService.setPrivateKey("AKYLHgp-aV3kOys9Oy6QgxNI6OGIlOB3G6kjGvhl57j_");
+        pushService.setPublicKey("BIGeWzIKODFi_GHGhLIeDL0fJbn5Zafo7g-i5ZBBTKKm0mqhi2Trsm2jYdgC16oWZTteMpliALI9J1kXtWL9KFQ");
+        pushService.setPrivateKey("KCqpgeQK_UOaxuEbs3HCyzzGY-gwKN_VvPH__rDECqI");
 
         SpringApplication.run(WebPushDemoApplication.class, args);
     }
